@@ -1,0 +1,1 @@
+qemu-img create -f qcow2 -F raw -o backing_file=/home/bartek/SO/minix_backup/minix.img minix.img
