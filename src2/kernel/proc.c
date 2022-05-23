@@ -60,7 +60,9 @@ static int deadlock(int function, register struct proc *caller,
 static int try_async(struct proc *caller_ptr);
 static int try_one(struct proc *src_ptr, struct proc *dst_ptr);
 static struct proc * pick_proc(void);
+/* so_2020 */
 static void enqueue_head(struct proc *rp);
+/* so_2020 */
 
 /* all idles share the same idle_priv structure */
 static struct priv idle_priv;
@@ -1526,6 +1528,7 @@ asyn_error:
 void enqueue(
   register struct proc *rp	/* this process is now runnable */
 )
+/* so_2020 */
 {
 /* Add 'rp' to one of the queues of runnable processes.  This function is 
  * responsible for inserting a process into one of the scheduling queues. 
@@ -1536,6 +1539,11 @@ void enqueue(
  * process is assigned to.
  */
   int q = rp->p_priority;	 		/* scheduling queue to use */
+  if(q == BUCKET_Q)
+  {
+	  /* if it is user process, then we use bucket number to assign queue */
+	  q = rp->p_bucket + FIRST_BUCKET_QUEUE;
+  }
   struct proc **rdy_head, **rdy_tail;
   
   assert(proc_is_runnable(rp));
@@ -1599,8 +1607,14 @@ void enqueue(
  * fair
  */
 static void enqueue_head(struct proc *rp)
+/* so_2020 */
 {
-  const int q = rp->p_priority;	 		/* scheduling queue to use */
+  int q = rp->p_priority;	 		/* scheduling queue to use */
+  if(q == BUCKET_Q)
+  {
+	  /* if it is user process, then we use bucket number as queue number */
+	  q = rp->p_bucket + FIRST_BUCKET_QUEUE;
+  }
 
   struct proc **rdy_head, **rdy_tail;
 
@@ -1645,6 +1659,7 @@ static void enqueue_head(struct proc *rp)
  *				dequeue					     * 
  *===========================================================================*/
 void dequeue(struct proc *rp)
+/* so_2020 */
 /* this process is no longer runnable */
 {
 /* A process must be removed from the scheduling queues, for example, because
@@ -1655,6 +1670,11 @@ void dequeue(struct proc *rp)
  * queue of the cpu the process is currently assigned to.
  */
   int q = rp->p_priority;		/* queue to use */
+  if(q == BUCKET_Q)
+  {
+	  /* if it is user process, then we use bucket number to as queue number */
+	  q = rp->p_bucket + FIRST_BUCKET_QUEUE;
+  }
   struct proc **xpp;			/* iterate over queue */
   struct proc *prev_xp;
   u64_t tsc, tsc_delta;
@@ -1712,6 +1732,7 @@ void dequeue(struct proc *rp)
  *				pick_proc				     * 
  *===========================================================================*/
 static struct proc * pick_proc(void)
+/* so_2020 */
 {
 /* Decide who to run now.  A new process is selected an returned.
  * When a billable process is selected, record it in 'bill_ptr', so that the 
@@ -1722,13 +1743,20 @@ static struct proc * pick_proc(void)
   register struct proc *rp;			/* process to run */
   struct proc **rdy_head;
   int q;				/* iterate over queues */
+  static int current_bucket; /* current bucket to choose if there are no system processes to run */
+  /* it must be static to preserve this information across calls */
+
+  /* First 0 .. 6 qeueues are for system processes, and next 10 queues corresponds to buckets
+	we preserve current_bucket across function calls and pick process from next bucket if available */
 
   /* Check each of the scheduling queues for ready processes. The number of
    * queues is defined in proc.h, and priorities are set in the task table.
    * If there are no processes ready to run, return NULL.
    */
+
+  /* check queuees 0 ... 6 (system processes) */
   rdy_head = get_cpulocal_var(run_q_head);
-  for (q=0; q < NR_SCHED_QUEUES; q++) {	
+  for (q=0; q < FIRST_BUCKET_QUEUE; q++) {	
 	if(!(rp = rdy_head[q])) {
 		TRACE(VF_PICKPROC, printf("cpu %d queue %d empty\n", cpuid, q););
 		continue;
@@ -1738,6 +1766,26 @@ static struct proc * pick_proc(void)
 		get_cpulocal_var(bill_ptr) = rp; /* bill for system time */
 	return rp;
   }
+
+	/* check buckets */
+	for(int i = 0; i < NR_BUCKETS; i++ )
+	{
+		int current_queue_to_check = (current_bucket + i) % NR_BUCKETS + FIRST_BUCKET_QUEUE;
+		int q = current_queue_to_check;
+		TRACE(VF_PICKPROC, printf("cpu %d bucket queue %d check\n", cpuid, q););
+		
+
+		if(!(rp = rdy_head[q])) {
+			TRACE(VF_PICKPROC, printf("cpu %d bucket queue %d empty\n", cpuid, q););
+			continue;
+		}
+		assert(proc_is_runnable(rp));
+		if (priv(rp)->s_flags & BILLABLE)	 	
+			get_cpulocal_var(bill_ptr) = rp; /* bill for system time */
+		current_bucket = (rp->p_bucket + 1) % NR_BUCKETS;
+		return rp;
+  	}
+
   return NULL;
 }
 

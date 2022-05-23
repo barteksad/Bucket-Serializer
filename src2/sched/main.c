@@ -19,6 +19,7 @@ struct machine machine;		/* machine info */
  *				main					     *
  *===========================================================================*/
 int main(void)
+/* so_2022 */
 {
 	/* Main routine of the scheduler. */
 	message m_in;	/* the incoming message itself is kept here. */
@@ -60,6 +61,9 @@ int main(void)
 		}
 
 		switch(call_nr) {
+		case SCHEDULING_SET_BUCKET:
+			result = do_set_bucket(&m_in);
+			break;
 		case SCHEDULING_INHERIT:
 		case SCHEDULING_START:
 			result = do_start_scheduling(&m_in);

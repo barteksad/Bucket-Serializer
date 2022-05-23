@@ -99,7 +99,8 @@ void system_init(void);
 void clear_endpoint(struct proc *rc);
 void clear_ipc_refs(struct proc *rc, int caller_ret);
 void kernel_call_resume(struct proc *p);
-int sched_proc(struct proc *rp, int priority, int quantum, int cpu);
+int sched_proc(struct proc *rp, int priority, int quantum, int cpu, int bucket);
+/* so_2022 */
 
 /* system/do_vtimer.c */
 void vtimer_check(struct proc *rp);

@@ -110,3 +110,27 @@ int sched_nice(struct mproc *rmp, int nice)
 
 	return (OK);
 }
+
+int sched_set_bucket()
+/* so_2022 */
+{
+	int rv;
+	message m;
+	struct mproc *rmp = mp;
+
+	int arg_who = m_in.m_pm_sched_scheduling_set_bucket.endpoint;
+	if ((rmp = find_proc(arg_who)) == NULL)
+		return(ESRCH);
+	int bucket = m_in.m_pm_sched_scheduling_set_bucket.new_bucket;
+
+	if (rmp->mp_scheduler == KERNEL || rmp->mp_scheduler == NONE)
+		return (EPERM);
+
+	m.m_pm_sched_scheduling_set_bucket.endpoint	= rmp->mp_endpoint;
+	m.m_pm_sched_scheduling_set_bucket.new_bucket = bucket;
+	if ((rv = _taskcall(rmp->mp_scheduler, SCHEDULING_SET_BUCKET, &m))) {
+		return rv;
+	}
+
+	return (OK);
+}

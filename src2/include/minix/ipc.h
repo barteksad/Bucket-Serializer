@@ -978,8 +978,9 @@ typedef struct {
 	int priority;
 	int quantum;
 	int cpu;
+	int bucket;
 
-	uint8_t padding[36];
+	uint8_t padding[32];
 } mess_lsys_krn_schedctl;
 _ASSERT_MSG_SIZE(mess_lsys_krn_schedctl);
 
@@ -988,8 +989,9 @@ typedef struct {
 	int quantum;
 	int priority;
 	int cpu;
+	int bucket;
 
-	uint8_t padding[40];
+	uint8_t padding[36];
 } mess_lsys_krn_schedule;
 _ASSERT_MSG_SIZE(mess_lsys_krn_schedule);
 
@@ -1578,6 +1580,14 @@ typedef struct {
 	uint8_t padding[52];
 } mess_pm_lsys_sigs_signal;
 _ASSERT_MSG_SIZE(mess_pm_lsys_sigs_signal);
+
+typedef struct {
+	endpoint_t endpoint;
+	uint32_t new_bucket;
+
+	uint8_t padding[48];
+} mess_pm_sched_scheduling_set_bucket;
+_ASSERT_MSG_SIZE(mess_pm_sched_scheduling_set_bucket);
 
 typedef struct {
 	endpoint_t endpoint;
@@ -2207,6 +2217,7 @@ typedef struct {
 		mess_pm_lsys_getepinfo	m_pm_lsys_getepinfo;
 		mess_pm_lsys_getprocnr	m_pm_lsys_getprocnr;
 		mess_pm_lsys_sigs_signal m_pm_lsys_sigs_signal;
+		mess_pm_sched_scheduling_set_bucket m_pm_sched_scheduling_set_bucket;
 		mess_pm_sched_scheduling_set_nice m_pm_sched_scheduling_set_nice;
 		mess_readclock_lc_rtcdev m_readclock_lc_rtcdev;
 		mess_rs_init		m_rs_init;

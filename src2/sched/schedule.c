@@ -11,6 +11,7 @@
 #include "schedproc.h"
 #include <assert.h>
 #include <minix/com.h>
+#include <minix/config.h> // for bucket constants
 #include <machine/archtypes.h>
 #include "kernel/proc.h" /* for queue constants */
 
@@ -21,6 +22,7 @@ static unsigned balance_timeout;
 
 static int schedule_process(struct schedproc * rmp, unsigned flags);
 static void balance_queues(minix_timer_t *tp);
+/* so_2022 */
 
 #define SCHEDULE_CHANGE_PRIO	0x1
 #define SCHEDULE_CHANGE_QUANTUM	0x2
@@ -88,6 +90,7 @@ static void pick_cpu(struct schedproc * proc)
  *===========================================================================*/
 
 int do_noquantum(message *m_ptr)
+/* so_2022 */
 {
 	register struct schedproc *rmp;
 	int rv, proc_nr_n;
@@ -99,9 +102,10 @@ int do_noquantum(message *m_ptr)
 	}
 
 	rmp = &schedproc[proc_nr_n];
-	if (rmp->priority < MIN_USER_Q) {
-		rmp->priority += 1; /* lower priority */
-	}
+	/* priority is fixed */
+	// if (rmp->priority < MIN_USER_Q) {
+	// 	rmp->priority += 1; /* lower priority */
+	// }
 
 	if ((rv = schedule_process_local(rmp)) != OK) {
 		return rv;
@@ -141,6 +145,7 @@ int do_stop_scheduling(message *m_ptr)
  *				do_start_scheduling			     *
  *===========================================================================*/
 int do_start_scheduling(message *m_ptr)
+/* so_2022 */
 {
 	register struct schedproc *rmp;
 	int rv, proc_nr_n, parent_nr_n;
@@ -163,7 +168,7 @@ int do_start_scheduling(message *m_ptr)
 	/* Populate process slot */
 	rmp->endpoint     = m_ptr->m_lsys_sched_scheduling_start.endpoint;
 	rmp->parent       = m_ptr->m_lsys_sched_scheduling_start.parent;
-	rmp->max_priority = m_ptr->m_lsys_sched_scheduling_start.maxprio;
+	rmp->max_priority = MAX_USER_Q;
 	if (rmp->max_priority >= NR_SCHED_QUEUES) {
 		return EINVAL;
 	}
@@ -176,6 +181,7 @@ int do_start_scheduling(message *m_ptr)
 		   process scheduled, and the parent of itself. */
 		rmp->priority   = USER_Q;
 		rmp->time_slice = DEFAULT_USER_TIME_SLICE;
+		rmp->bucket		= schedproc[parent_nr_n].bucket;
 
 		/*
 		 * Since kernel never changes the cpu of a process, all are
@@ -195,8 +201,9 @@ int do_start_scheduling(message *m_ptr)
 		/* We have a special case here for system processes, for which
 		 * quanum and priority are set explicitly rather than inherited 
 		 * from the parent */
-		rmp->priority   = rmp->max_priority;
+		rmp->priority   = USER_Q;
 		rmp->time_slice = m_ptr->m_lsys_sched_scheduling_start.quantum;
+		rmp->bucket     = DEFAULT_BUCKET;
 		break;
 		
 	case SCHEDULING_INHERIT:
@@ -207,8 +214,9 @@ int do_start_scheduling(message *m_ptr)
 				&parent_nr_n)) != OK)
 			return rv;
 
-		rmp->priority = schedproc[parent_nr_n].priority;
+		rmp->priority = USER_Q;
 		rmp->time_slice = schedproc[parent_nr_n].time_slice;
+		rmp->bucket		= schedproc[parent_nr_n].bucket;
 		break;
 		
 	default: 
@@ -218,7 +226,7 @@ int do_start_scheduling(message *m_ptr)
 
 	/* Take over scheduling the process. The kernel reply message populates
 	 * the processes current priority and its time slice */
-	if ((rv = sys_schedctl(0, rmp->endpoint, 0, 0, 0)) != OK) {
+	if ((rv = sys_schedctl(0, rmp->endpoint, 0, 0, 0, 0)) != OK) {
 		printf("Sched: Error taking over scheduling for %d, kernel said %d\n",
 			rmp->endpoint, rv);
 		return rv;
@@ -256,53 +264,57 @@ int do_start_scheduling(message *m_ptr)
  *===========================================================================*/
 int do_nice(message *m_ptr)
 {
-	struct schedproc *rmp;
-	int rv;
-	int proc_nr_n;
-	unsigned new_q, old_q, old_max_q;
+	return 0;
+	// struct schedproc *rmp;
+	// int rv;
+	// int proc_nr_n;
+	// unsigned new_q, old_q, old_max_q;
 
-	/* check who can send you requests */
-	if (!accept_message(m_ptr))
-		return EPERM;
+	// /* check who can send you requests */
+	// if (!accept_message(m_ptr))
+	// 	return EPERM;
 
-	if (sched_isokendpt(m_ptr->m_pm_sched_scheduling_set_nice.endpoint, &proc_nr_n) != OK) {
-		printf("SCHED: WARNING: got an invalid endpoint in OoQ msg "
-		"%d\n", m_ptr->m_pm_sched_scheduling_set_nice.endpoint);
-		return EBADEPT;
-	}
+	// if (sched_isokendpt(m_ptr->m_pm_sched_scheduling_set_nice.endpoint, &proc_nr_n) != OK) {
+	// 	printf("SCHED: WARNING: got an invalid endpoint in OoQ msg "
+	// 	"%d\n", m_ptr->m_pm_sched_scheduling_set_nice.endpoint);
+	// 	return EBADEPT;
+	// }
 
-	rmp = &schedproc[proc_nr_n];
-	new_q = m_ptr->m_pm_sched_scheduling_set_nice.maxprio;
-	if (new_q >= NR_SCHED_QUEUES) {
-		return EINVAL;
-	}
+	// rmp = &schedproc[proc_nr_n];
+	// new_q = m_ptr->m_pm_sched_scheduling_set_nice.maxprio;
+	// if (new_q >= NR_SCHED_QUEUES) {
+	// 	return EINVAL;
+	// }
 
-	/* Store old values, in case we need to roll back the changes */
-	old_q     = rmp->priority;
-	old_max_q = rmp->max_priority;
+	// /* Store old values, in case we need to roll back the changes */
+	// old_q     = rmp->priority;
+	// old_max_q = rmp->max_priority;
 
-	/* Update the proc entry and reschedule the process */
-	rmp->max_priority = rmp->priority = new_q;
+	// /* Update the proc entry and reschedule the process */
+	// rmp->max_priority = rmp->priority = new_q;
 
-	if ((rv = schedule_process_local(rmp)) != OK) {
-		/* Something went wrong when rescheduling the process, roll
-		 * back the changes to proc struct */
-		rmp->priority     = old_q;
-		rmp->max_priority = old_max_q;
-	}
+	// if ((rv = schedule_process_local(rmp)) != OK) {
+	// 	/* Something went wrong when rescheduling the process, roll
+	// 	 * back the changes to proc struct */
+	// 	rmp->priority     = old_q;
+	// 	rmp->max_priority = old_max_q;
+	// }
 
-	return rv;
+	// return rv;
 }
 
 /*===========================================================================*
  *				schedule_process			     *
  *===========================================================================*/
 static int schedule_process(struct schedproc * rmp, unsigned flags)
+/* so_2022 */
 {
 	int err;
-	int new_prio, new_quantum, new_cpu;
+	int new_prio, new_quantum, new_cpu, new_bucket;
 
 	pick_cpu(rmp);
+
+	new_bucket = rmp->bucket;
 
 	if (flags & SCHEDULE_CHANGE_PRIO)
 		new_prio = rmp->priority;
@@ -320,7 +332,7 @@ static int schedule_process(struct schedproc * rmp, unsigned flags)
 		new_cpu = -1;
 
 	if ((err = sys_schedule(rmp->endpoint, new_prio,
-		new_quantum, new_cpu)) != OK) {
+		new_quantum, new_cpu, new_bucket)) != OK) {
 		printf("PM: An error occurred when trying to schedule %d: %d\n",
 		rmp->endpoint, err);
 	}
@@ -334,10 +346,11 @@ static int schedule_process(struct schedproc * rmp, unsigned flags)
  *===========================================================================*/
 
 void init_scheduling(void)
+/* so_2022 */
 {
-	balance_timeout = BALANCE_TIMEOUT * sys_hz();
-	init_timer(&sched_timer);
-	set_timer(&sched_timer, balance_timeout, balance_queues, 0);
+	// balance_timeout = BALANCE_TIMEOUT * sys_hz();
+	// init_timer(&sched_timer);
+	// set_timer(&sched_timer, balance_timeout, balance_queues, 0);
 }
 
 /*===========================================================================*
@@ -350,18 +363,48 @@ void init_scheduling(void)
  * and pulls them back up. This default policy will soon be changed.
  */
 static void balance_queues(minix_timer_t *tp)
+/* so_2022 */
 {
-	struct schedproc *rmp;
-	int proc_nr;
+	// struct schedproc *rmp;
+	// int proc_nr;
 
-	for (proc_nr=0, rmp=schedproc; proc_nr < NR_PROCS; proc_nr++, rmp++) {
-		if (rmp->flags & IN_USE) {
-			if (rmp->priority > rmp->max_priority) {
-				rmp->priority -= 1; /* increase priority */
-				schedule_process_local(rmp);
-			}
-		}
+	// for (proc_nr=0, rmp=schedproc; proc_nr < NR_PROCS; proc_nr++, rmp++) {
+	// 	if (rmp->flags & IN_USE) {
+	// 		if (rmp->priority > rmp->max_priority) {
+	// 			rmp->priority -= 1; /* increase priority */
+	// 			schedule_process_local(rmp);
+	// 		}
+	// 	}
+	// }
+
+	// set_timer(&sched_timer, balance_timeout, balance_queues, 0);
+}
+
+int do_set_bucket(message *m_ptr)
+{
+	register struct schedproc *rmp;
+	int proc_nr_n;
+	int rv;
+
+	if (sched_isokendpt(m_ptr->m_pm_sched_scheduling_set_bucket.endpoint, &proc_nr_n) != OK) {
+		printf("SCHED: WARNING: got an invalid endpoint in OoQ msg "
+	"%d\n", m_ptr->m_pm_sched_scheduling_set_bucket.endpoint);
+	return EBADEPT;
+	}
+	rmp = &schedproc[proc_nr_n];
+
+	assert(m_ptr->m_type == SCHEDULING_SET_BUCKET);
+
+	int old_bucket = rmp->bucket;
+	int new_bucket = m_ptr->m_pm_sched_scheduling_set_bucket.new_bucket;
+	if (new_bucket < 0 || new_bucket >= NR_BUCKETS) {
+		return EINVAL;
+	}
+	rmp->bucket = new_bucket;
+	if ((rv = schedule_process(rmp, SCHEDULE_CHANGE_ALL)) != OK) {
+		rmp->bucket     = old_bucket;
+		return rv;
 	}
 
-	set_timer(&sched_timer, balance_timeout, balance_queues, 0);
+	return OK;
 }

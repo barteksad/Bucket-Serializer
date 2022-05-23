@@ -56,14 +56,21 @@
 /* Max. number of IRQs that can be assigned to a process */
 #define NR_IRQ	16
 
+/* buckets constants */
+#define BUCKET_Q 8       /* user processes priority */
+#define NR_BUCKETS 10    /* buckets count */
+#define DEFAULT_BUCKET 0 /* default bucket number */
+/* 7 is first queue of buckets, system processes has priority 0 ... 6, user are in queues 7 .. 16 */
+/* each queue corresponds to each bucket */
+#define FIRST_BUCKET_QUEUE 7 
+
 /* Scheduling priorities. Values must start at zero (highest
  * priority) and increment.
  */
-#define NR_SCHED_QUEUES   16	/* MUST equal minimum priority + 1 */
+#define NR_SCHED_QUEUES   17	/* MUST equal minimum priority + 1 */ /* 0 ... 6 for system , 7 .. 16 for user buckets */
 #define TASK_Q		   0	/* highest, used for kernel tasks */
 #define MAX_USER_Q  	   0    /* highest priority for user processes */   
-#define USER_Q  	  ((MIN_USER_Q - MAX_USER_Q) / 2 + MAX_USER_Q) /* default
-						(should correspond to nice 0) */
+#define USER_Q  	  BUCKET_Q /* default */
 #define MIN_USER_Q	  (NR_SCHED_QUEUES - 1)	/* minimum priority for user
 						   processes */
 /* default scheduling quanta */

@@ -310,7 +310,7 @@ static int schedule_process(struct schedproc * rmp, unsigned flags)
 	pick_cpu(rmp);
 
 	new_bucket = rmp->bucket;
-	printf("PM:schedule_process called with bucket %d\n", rmp->bucket);
+	// printf("PM:schedule_process called with bucket %d\n", rmp->bucket);
 
 	if (flags & SCHEDULE_CHANGE_PRIO)
 		new_prio = rmp->priority;
