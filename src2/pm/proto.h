@@ -51,7 +51,8 @@ int do_getrusage(void);
 void sched_init(void);
 int sched_start_user(endpoint_t ep, struct mproc *rmp);
 int sched_nice(struct mproc *rmp, int nice);
-int sched_set_bucket();
+/* so_2022 */
+int do_set_bucket(void);
 /* so 2022 */
 
 /* profile.c */

@@ -87,31 +87,32 @@ int sched_start_user(endpoint_t ep, struct mproc *rmp)
  *				sched_nice				     *
  *===========================================================================*/
 int sched_nice(struct mproc *rmp, int nice)
+/* so_2022 */
 {
-	int rv;
-	message m;
-	unsigned maxprio;
+	// int rv;
+	// message m;
+	// unsigned maxprio;
 
-	/* If the kernel is the scheduler, we don't allow messing with the
-	 * priority. If you want to control process priority, assign the process
-	 * to a user-space scheduler */
-	if (rmp->mp_scheduler == KERNEL || rmp->mp_scheduler == NONE)
-		return (EINVAL);
+	// /* If the kernel is the scheduler, we don't allow messing with the
+	//  * priority. If you want to control process priority, assign the process
+	//  * to a user-space scheduler */
+	// if (rmp->mp_scheduler == KERNEL || rmp->mp_scheduler == NONE)
+	// 	return (EINVAL);
 
-	if ((rv = nice_to_priority(nice, &maxprio)) != OK) {
-		return rv;
-	}
+	// if ((rv = nice_to_priority(nice, &maxprio)) != OK) {
+	// 	return rv;
+	// }
 
-	m.m_pm_sched_scheduling_set_nice.endpoint	= rmp->mp_endpoint;
-	m.m_pm_sched_scheduling_set_nice.maxprio	= maxprio;
-	if ((rv = _taskcall(rmp->mp_scheduler, SCHEDULING_SET_NICE, &m))) {
-		return rv;
-	}
+	// m.m_pm_sched_scheduling_set_nice.endpoint	= rmp->mp_endpoint;
+	// m.m_pm_sched_scheduling_set_nice.maxprio	= maxprio;
+	// if ((rv = _taskcall(rmp->mp_scheduler, SCHEDULING_SET_NICE, &m))) {
+	// 	return rv;
+	// }
 
 	return (OK);
 }
 
-int sched_set_bucket()
+int do_set_bucket(void)
 /* so_2022 */
 {
 	int rv;
