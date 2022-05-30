@@ -26,16 +26,18 @@ static void balance_queues(minix_timer_t *tp);
 
 #define SCHEDULE_CHANGE_PRIO	0x1
 #define SCHEDULE_CHANGE_QUANTUM	0x2
-#define SCHEDULE_CHANGE_CPU	0x4
+#define SCHEDULE_CHANGE_CPU		0x4
+#define SCHEDULE_CHANGE_BUCKET	0x8
 
 #define SCHEDULE_CHANGE_ALL	(	\
 		SCHEDULE_CHANGE_PRIO	|	\
 		SCHEDULE_CHANGE_QUANTUM	|	\
-		SCHEDULE_CHANGE_CPU		\
+		SCHEDULE_CHANGE_CPU		|   \
+		SCHEDULE_CHANGE_BUCKET		\
 		)
 
 #define schedule_process_local(p)	\
-	schedule_process(p, SCHEDULE_CHANGE_PRIO | SCHEDULE_CHANGE_QUANTUM)
+	schedule_process(p, SCHEDULE_CHANGE_PRIO | SCHEDULE_CHANGE_QUANTUM | SCHEDULE_CHANGE_BUCKET)
 #define schedule_process_migrate(p)	\
 	schedule_process(p, SCHEDULE_CHANGE_CPU)
 
@@ -102,10 +104,6 @@ int do_noquantum(message *m_ptr)
 	}
 
 	rmp = &schedproc[proc_nr_n];
-	/* priority is fixed */
-	// if (rmp->priority < MIN_USER_Q) {
-	// 	rmp->priority += 1; /* lower priority */
-	// }
 
 	if ((rv = schedule_process_local(rmp)) != OK) {
 		return rv;
@@ -314,7 +312,8 @@ static int schedule_process(struct schedproc * rmp, unsigned flags)
 
 	pick_cpu(rmp);
 
-	new_bucket = rmp->bucket;
+	if(flags & SCHEDULE_CHANGE_BUCKET)	
+		new_bucket = rmp->bucket;
 
 	if (flags & SCHEDULE_CHANGE_PRIO)
 		new_prio = rmp->priority;
@@ -388,7 +387,7 @@ int do_set_bucket(message *m_ptr)
 
 	if (sched_isokendpt(m_ptr->m_pm_sched_scheduling_set_bucket.endpoint, &proc_nr_n) != OK) {
 		printf("SCHED: WARNING: got an invalid endpoint in OoQ msg "
-	"%d\n", m_ptr->m_pm_sched_scheduling_set_bucket.endpoint);
+			"%d\n", m_ptr->m_pm_sched_scheduling_set_bucket.endpoint);
 	return EBADEPT;
 	}
 	rmp = &schedproc[proc_nr_n];
@@ -399,9 +398,9 @@ int do_set_bucket(message *m_ptr)
 	int new_bucket = m_ptr->m_pm_sched_scheduling_set_bucket.new_bucket;
 	if (new_bucket < 0 || new_bucket >= NR_BUCKETS) {
 		return EINVAL;
-	}
+	}	
 	rmp->bucket = new_bucket;
-	if ((rv = schedule_process(rmp, SCHEDULE_CHANGE_ALL)) != OK) {
+	if ((rv = schedule_process_local(rmp)) != OK) {
 		rmp->bucket     = old_bucket;
 		return rv;
 	}

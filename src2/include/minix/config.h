@@ -69,10 +69,9 @@
  */
 #define NR_SCHED_QUEUES   17	/* MUST equal minimum priority + 1 */ /* 0 ... 6 for system , 7 .. 16 for user buckets */
 #define TASK_Q		   0	/* highest, used for kernel tasks */
-#define MAX_USER_Q  	   0    /* highest priority for user processes */   
+#define MAX_USER_Q  	   BUCKET_Q    /* highest priority for user processes */   
 #define USER_Q  	  BUCKET_Q /* default */
-#define MIN_USER_Q	  (NR_SCHED_QUEUES - 1)	/* minimum priority for user
-						   processes */
+#define MIN_USER_Q	  BUCKET_Q	/* minimum priority for user processes */
 /* default scheduling quanta */
 #define USER_QUANTUM 200
 

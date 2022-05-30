@@ -1538,12 +1538,12 @@ void enqueue(
  * This function can be used x-cpu as it always uses the queues of the cpu the
  * process is assigned to.
  */
-  int q = rp->p_priority;	 		/* scheduling queue to use */
-  if(q == BUCKET_Q)
-  {
-	  /* if it is user process, then we use bucket number to assign queue */
-	  q = rp->p_bucket + FIRST_BUCKET_QUEUE;
-  }
+  
+  /* scheduling queue to use */
+  /* if it is user process, then we use bucket number to assign queue */
+  const int q = rp->p_priority == BUCKET_Q ?
+	rp->p_bucket + FIRST_BUCKET_QUEUE : rp->p_priority;
+  
   struct proc **rdy_head, **rdy_tail;
   
   assert(proc_is_runnable(rp));
@@ -1609,12 +1609,10 @@ void enqueue(
 static void enqueue_head(struct proc *rp)
 /* so_2020 */
 {
-  int q = rp->p_priority;	 		/* scheduling queue to use */
-  if(q == BUCKET_Q)
-  {
-	  /* if it is user process, then we use bucket number as queue number */
-	  q = rp->p_bucket + FIRST_BUCKET_QUEUE;
-  }
+  /* scheduling queue to use */
+  /* if it is user process, then we use bucket number to assign queue */
+  const int q = rp->p_priority == BUCKET_Q ?
+	rp->p_bucket + FIRST_BUCKET_QUEUE : rp->p_priority;
 
   struct proc **rdy_head, **rdy_tail;
 
@@ -1669,12 +1667,12 @@ void dequeue(struct proc *rp)
  * This function can operate x-cpu as it always removes the process from the
  * queue of the cpu the process is currently assigned to.
  */
-  int q = rp->p_priority;		/* queue to use */
-  if(q == BUCKET_Q)
-  {
-	  /* if it is user process, then we use bucket number to as queue number */
-	  q = rp->p_bucket + FIRST_BUCKET_QUEUE;
-  }
+
+  /* scheduling queue to use */
+  /* if it is user process, then we use bucket number to assign queue */
+  const int q = rp->p_priority == BUCKET_Q ?
+	rp->p_bucket + FIRST_BUCKET_QUEUE : rp->p_priority;
+	
   struct proc **xpp;			/* iterate over queue */
   struct proc *prev_xp;
   u64_t tsc, tsc_delta;
